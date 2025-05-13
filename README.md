@@ -66,8 +66,9 @@ GRANT INSERT, UPDATE, SELECT ON WATERMARK TO dw;
 
 ## 🔃 Herramientas y funciones clave
 
-- 📥 **Carga de datos**: `SQL*Loader` con archivos `.csv`
-- 🧠 **Procedimientos y Triggers**:
+- **Carga de datos**: `SQL*Loader` con archivos `.csv`
+- **Ejecutar**: sqlldr stage/stage123@XEPDB1 control=/opt/oracle/csv/data.ctl log=/opt/oracle/csv/datos.log
+- **Procedimientos y Triggers**:
   - `PRC_CONSTRUYE_HECHOS`
   - `PRC_DEVUELVE_CORRELATIVOS`
   - `PRC_DIM_*`
