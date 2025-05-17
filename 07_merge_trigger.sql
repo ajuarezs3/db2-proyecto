@@ -1,178 +1,172 @@
 
--- ===================================
--- MERGE DESDE STAGE A DW
--- ===================================
 
 -- HORA
-MERGE INTO dw.BD2_DIM_HORA d
-USING (
-  SELECT DISTINCT HoraPartido AS HORA_PARTIDO
-  FROM stage.BD2_STG_DATOS
-) s
-ON (d.HORA_PARTIDO = s.HORA_PARTIDO)
-WHEN NOT MATCHED THEN
-  INSERT (HORA_PARTIDO)
-  VALUES (s.HORA_PARTIDO);
-
--- RONDA
-MERGE INTO dw.BD2_DIM_RONDA d
-USING (
-  SELECT DISTINCT Ronda
-  FROM stage.BD2_STG_DATOS
-) s
-ON (d.RONDA = s.RONDA)
-WHEN NOT MATCHED THEN
-  INSERT (RONDA)
-  VALUES (s.RONDA);
-
--- ESTADIO
-MERGE INTO dw.BD2_DIM_ESTADIO d
-USING (
-  SELECT DISTINCT Estadio
-  FROM stage.BD2_STG_DATOS
-) s
-ON (d.NOMBRE_ESTADIO = s.Estadio)
-WHEN NOT MATCHED THEN
-  INSERT (NOMBRE_ESTADIO)
-  VALUES (s.Estadio);
-
--- CIUDAD
-MERGE INTO dw.BD2_DIM_CIUDAD d
-USING (
-  SELECT DISTINCT CiudadOrganizadora
-  FROM stage.BD2_STG_DATOS
-) s
-ON (d.NOMBRE_CIUDAD = s.CiudadOrganizadora)
-WHEN NOT MATCHED THEN
-  INSERT (NOMBRE_CIUDAD)
-  VALUES (s.CiudadOrganizadora);
-
--- PAIS ORGANIZADOR
-MERGE INTO dw.BD2_DIM_PAIS_ORGANIZADOR d
-USING (
-  SELECT DISTINCT PaisOrganizador
-  FROM stage.BD2_STG_DATOS
-) s
-ON (d.NOMBRE_PAIS = s.PaisOrganizador)
-WHEN NOT MATCHED THEN
-  INSERT (NOMBRE_PAIS)
-  VALUES (s.PaisOrganizador);
-
--- SELECCIONES (LOCAL)
-MERGE INTO dw.BD2_DIM_SELECCION d
-USING (
-  SELECT DISTINCT EquipoLocal AS NOMBRE_SELECCION
-  FROM stage.BD2_STG_DATOS
-) s
-ON (d.NOMBRE_SELECCION = s.NOMBRE_SELECCION)
-WHEN NOT MATCHED THEN
-  INSERT (NOMBRE_SELECCION)
-  VALUES (s.NOMBRE_SELECCION);
-
--- SELECCIONES (VISITA)
-MERGE INTO dw.BD2_DIM_SELECCION d
-USING (
-  SELECT DISTINCT EquipoVisita AS NOMBRE_SELECCION
-  FROM stage.BD2_STG_DATOS
-) s
-ON (d.NOMBRE_SELECCION = s.NOMBRE_SELECCION)
-WHEN NOT MATCHED THEN
-  INSERT (NOMBRE_SELECCION)
-  VALUES (s.NOMBRE_SELECCION);
-
--- HECHOS
-MERGE INTO dw.BD2_HECHOS d
-USING (
-  SELECT
-    Anio,
-    FechaPartido,
-    HoraPartido,
-    Ronda,
-    Estadio,
-    CiudadOrganizadora,
-    PaisOrganizador,
-    EquipoLocal,
-    golesLocal,
-    golesVisita,
-    EquipoVisita,
-    Asistencia
-  FROM stage.BD2_STG_DATOS
-) s
-ON (
-  d.Anio = s.Anio AND
-  d.FechaPartido = s.FechaPartido AND
-  d.EquipoLocal = s.EquipoLocal AND
-  d.EquipoVisita = s.EquipoVisita
-)
-WHEN MATCHED THEN
-  UPDATE SET
-    d.golesLocal = s.golesLocal,
-    d.golesVisita = s.golesVisita,
-    d.Asistencia = s.Asistencia
-WHEN NOT MATCHED THEN
-  INSERT (
-    Anio,
-    FechaPartido,
-    HoraPartido,
-    Ronda,
-    Estadio,
-    CiudadOrganizadora,
-    PaisOrganizador,
-    EquipoLocal,
-    golesLocal,
-    golesVisita,
-    EquipoVisita,
-    Asistencia
-  ) VALUES (
-    s.Anio,
-    s.FechaPartido,
-    s.HoraPartido,
-    s.Ronda,
-    s.Estadio,
-    s.CiudadOrganizadora,
-    s.PaisOrganizador,
-    s.EquipoLocal,
-    s.golesLocal,
-    s.golesVisita,
-    s.EquipoVisita,
-    s.Asistencia
-  );
-
-
-CREATE OR REPLACE TRIGGER produccion.TRG_BD2_HECHOS_SINC
-AFTER UPDATE ON produccion.BD2_HECHOS
-FOR EACH ROW
+CREATE OR REPLACE PROCEDURE dw.PRC_DIM_HORA(p_opcion NUMBER) AS
 BEGIN
-  INSERT INTO produccion.WATERMARK (
-    TABLA_AFECTADA,
-    TIPO_OPERACION,
-    USUARIO,
-    FECHA_OPERACION
-  ) VALUES (
-    'BD2_HECHOS',
-    'UPDATE',
-    USER,
-    SYSDATE
-  );
+  IF p_opcion = 1 THEN
+    MERGE INTO dw.BD2_DIM_HORA d
+    USING (
+      SELECT DISTINCT HORA
+      FROM stage.BD2_STG_DATOS
+    ) s
+    ON (d.HORA = s.HORA)
+    WHEN NOT MATCHED THEN
+      INSERT (HORA)
+      VALUES (s.HORA);
+  END IF;
 END;
 /
 
-
-CREATE OR REPLACE PROCEDURE stage.PRC_SINCRONIZACION AS
+-- RONDA
+CREATE OR REPLACE PROCEDURE dw.PRC_DIM_RONDA(p_opcion NUMBER) AS
 BEGIN
-  -- Borra datos en STAGE
-  DELETE FROM stage.BD2_STG_DATOS;
+  IF p_opcion = 1 THEN
+    MERGE INTO dw.BD2_DIM_RONDA d
+    USING (
+      SELECT DISTINCT RONDA
+      FROM stage.BD2_STG_DATOS
+    ) s
+    ON (d.RONDA = s.RONDA)
+    WHEN NOT MATCHED THEN
+      INSERT (RONDA)
+      VALUES (s.RONDA);
+  END IF;
+END;
+/
 
-  -- Inserta nuevamente desde DW
-  INSERT INTO stage.BD2_STG_DATOS (
-    Anio, FechaPartido, HoraPartido, Ronda, Estadio,
-    CiudadOrganizadora, PaisOrganizador,
-    EquipoLocal, golesLocal, golesVisita, EquipoVisita, Asistencia
-  )
-  SELECT
-    Anio, FechaPartido, HoraPartido, Ronda, Estadio,
-    CiudadOrganizadora, PaisOrganizador,
-    EquipoLocal, golesLocal, golesVisita, EquipoVisita, Asistencia
-  FROM dw.BD2_HECHOS;
+-- SELECCION
+CREATE OR REPLACE PROCEDURE dw.PRC_DIM_SELECCION(p_opcion NUMBER) AS
+BEGIN
+  IF p_opcion = 1 THEN
+    MERGE INTO dw.BD2_DIM_SELECCION d
+    USING (
+      SELECT DISTINCT EQUIPO_LOCAL AS NOMBRE_SELECCION FROM stage.BD2_STG_DATOS
+      UNION
+      SELECT DISTINCT EQUIPO_VISITA FROM stage.BD2_STG_DATOS
+    ) s
+    ON (d.NOMBRE_SELECCION = s.NOMBRE_SELECCION)
+    WHEN NOT MATCHED THEN
+      INSERT (NOMBRE_SELECCION)
+      VALUES (s.NOMBRE_SELECCION);
+  END IF;
+END;
+/
+
+-- PAIS ORGANIZADOR
+CREATE OR REPLACE PROCEDURE dw.PRC_DIM_PAIS(p_opcion NUMBER) AS
+BEGIN
+  IF p_opcion = 1 THEN
+    MERGE INTO dw.BD2_DIM_PAIS_ORGANIZADOR d
+    USING (
+      SELECT DISTINCT PAIS
+      FROM stage.BD2_STG_DATOS
+    ) s
+    ON (d.NOMBRE_PAIS = s.PAIS)
+    WHEN NOT MATCHED THEN
+      INSERT (NOMBRE_PAIS)
+      VALUES (s.PAIS);
+  END IF;
+END;
+/
+
+-- CIUDAD
+CREATE OR REPLACE PROCEDURE dw.PRC_DIM_CIUDAD(p_opcion NUMBER) AS
+BEGIN
+  IF p_opcion = 1 THEN
+    MERGE INTO dw.BD2_DIM_CIUDAD d
+    USING (
+      SELECT DISTINCT CIUDAD
+      FROM stage.BD2_STG_DATOS
+    ) s
+    ON (d.NOMBRE_CIUDAD = s.CIUDAD)
+    WHEN NOT MATCHED THEN
+      INSERT (NOMBRE_CIUDAD)
+      VALUES (s.CIUDAD);
+  END IF;
+END;
+/
+
+-- ESTADIO
+CREATE OR REPLACE PROCEDURE dw.PRC_DIM_ESTADIO(p_opcion NUMBER) AS
+BEGIN
+  IF p_opcion = 1 THEN
+    MERGE INTO dw.BD2_DIM_ESTADIO d
+    USING (
+      SELECT DISTINCT ESTADIO
+      FROM stage.BD2_STG_DATOS
+    ) s
+    ON (d.NOMBRE_ESTADIO = s.ESTADIO)
+    WHEN NOT MATCHED THEN
+      INSERT (NOMBRE_ESTADIO)
+      VALUES (s.ESTADIO);
+  END IF;
+END;
+/
+
+-- ===================================
+-- PROCEDIMIENTO PARA LLENAR HECHOS Y NO_HECHOS
+-- ===================================
+
+CREATE OR REPLACE PROCEDURE dw.PRC_CONSTRUYE_HECHOS(p_opcion NUMBER) AS
+BEGIN
+  IF p_opcion = 1 THEN
+    INSERT INTO dw.BD2_HECHOS (
+      ANIO, FECHA_KEY, HORA_KEY, RONDA_KEY, SELECCION_LOCAL_KEY,
+      SELECCION_VISITA_KEY, GOLES_LOCAL, GOLES_VISITA,
+      ESTADIO_KEY, CIUDAD_KEY, PAIS_KEY, ASISTENCIA
+    )
+    SELECT
+      s.ANIO,
+      TO_NUMBER(TO_CHAR(s.FECHA, 'YYYYMMDD')),
+      h.HORA_KEY,
+      r.RONDA_KEY,
+      sl.SELECCION_KEY,
+      sv.SELECCION_KEY,
+      s.GOLES_LOCAL,
+      s.GOLES_VISITA,
+      e.ESTADIO_KEY,
+      c.CIUDAD_KEY,
+      p.PAIS_KEY,
+      s.ASISTENCIA
+    FROM stage.BD2_STG_DATOS s
+    LEFT JOIN dw.BD2_DIM_HORA h ON h.HORA_PARTIDO = s.HORA
+    LEFT JOIN dw.BD2_DIM_RONDA r ON r.RONDA = s.RONDA
+    LEFT JOIN dw.BD2_DIM_SELECCION sl ON sl.NOMBRE_SELECCION = s.EQUIPO_LOCAL
+    LEFT JOIN dw.BD2_DIM_SELECCION sv ON sv.NOMBRE_SELECCION = s.EQUIPO_VISITA
+    LEFT JOIN dw.BD2_DIM_ESTADIO e ON e.NOMBRE_ESTADIO = s.ESTADIO
+    LEFT JOIN dw.BD2_DIM_CIUDAD c ON c.NOMBRE_CIUDAD = s.CIUDAD
+    LEFT JOIN dw.BD2_DIM_PAIS_ORGANIZADOR p ON p.NOMBRE_PAIS = s.PAIS
+    WHERE h.HORA_KEY IS NOT NULL AND r.RONDA_KEY IS NOT NULL AND
+          sl.SELECCION_KEY IS NOT NULL AND sv.SELECCION_KEY IS NOT NULL AND
+          e.ESTADIO_KEY IS NOT NULL AND c.CIUDAD_KEY IS NOT NULL AND p.PAIS_KEY IS NOT NULL;
+
+    INSERT INTO dw.BD2_NO_HECHOS (
+      FECHA, HORA, RONDA, EQUIPO_LOCAL, EQUIPO_VISITA,
+      ESTADIO, CIUDAD, PAIS, GOLES_LOCAL, GOLES_VISITA, ASISTENCIA
+    )
+    SELECT
+      s.FECHA,
+      s.HORA,
+      s.RONDA,
+      s.EQUIPO_LOCAL,
+      s.EQUIPO_VISITA,
+      s.ESTADIO,
+      s.CIUDAD,
+      s.PAIS,
+      s.GOLES_LOCAL,
+      s.GOLES_VISITA,
+      s.ASISTENCIA
+    FROM stage.BD2_STG_DATOS s
+    LEFT JOIN dw.BD2_DIM_HORA h ON h.HORA_PARTIDO = s.HORA
+    LEFT JOIN dw.BD2_DIM_RONDA r ON r.RONDA = s.RONDA
+    LEFT JOIN dw.BD2_DIM_SELECCION sl ON sl.NOMBRE_SELECCION = s.EQUIPO_LOCAL
+    LEFT JOIN dw.BD2_DIM_SELECCION sv ON sv.NOMBRE_SELECCION = s.EQUIPO_VISITA
+    LEFT JOIN dw.BD2_DIM_ESTADIO e ON e.NOMBRE_ESTADIO = s.ESTADIO
+    LEFT JOIN dw.BD2_DIM_CIUDAD c ON c.NOMBRE_CIUDAD = s.CIUDAD
+    LEFT JOIN dw.BD2_DIM_PAIS_ORGANIZADOR p ON p.NOMBRE_PAIS = s.PAIS
+    WHERE h.HORA_KEY IS NULL OR r.RONDA_KEY IS NULL OR
+          sl.SELECCION_KEY IS NULL OR sv.SELECCION_KEY IS NULL OR
+          e.ESTADIO_KEY IS NULL OR c.CIUDAD_KEY IS NULL OR p.PAIS_KEY IS NULL;
+  END IF;
 END;
 /
