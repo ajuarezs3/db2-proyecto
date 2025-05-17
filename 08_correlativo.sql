@@ -1,3 +1,7 @@
+-- ============================================
+-- PROCEDIMIENTO EN DW: PRC_DEVUELVE_CORRELATIVOS
+-- ============================================
+
 --Para manejo de correlativos
 CREATE OR REPLACE PROCEDURE DW.PRC_DEVUELVE_CORRELATIVOS (
     p_nombre_dimension IN VARCHAR2,
