@@ -1,4 +1,3 @@
-SET SERVEROUTPUT ON;
 
     -- Intentamos crear el usuario usando la tablespace USERS
     BEGIN
