@@ -1,0 +1,5 @@
+-- Permisos de DW sobre STAGE
+GRANT INSERT, UPDATE, SELECT ON produccion.WATERMARK TO dw;
+GRANT INSERT ON produccion.WATERMARK TO stage;
+GRANT SELECT, UPDATE ON produccion.WATERMARK TO stage;
+GRANT INSERT ON produccion.WATERMARK TO dw;
